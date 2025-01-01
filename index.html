@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelSprite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-bg: #1a1a1a;
+            --color-panel: #2a2a2a;
+            --color-header: #333333;
+            --color-border: #444444;
+            --color-accent: #61dafb;
+            --color-text: #ffffff;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .panel {
+            background-color: var(--color-panel);
+            border: 2px solid var(--color-border);
+            border-radius: 10px;
+        }
+
+        .header {
+            background-color: var(--color-header);
+        }
+
+        .tool-btn {
+            @apply w-16 h-16 flex items-center justify-center rounded-full hover:bg-opacity-20 hover:bg-blue-300 border-2 border-blue-400 text-4xl;
+            transition: transform 0.1s ease-in-out;
+        }
+
+        .tool-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .tool-btn:active {
+            transform: scale(0.9);
+        }
+
+        .tool-active {
+            @apply bg-blue-500 text-white;
+        }
+
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+                linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+                linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+
+        .color-well {
+            width: 48px;
+            height: 48px;
+            border: 2px solid var(--color-border);
+        }
+
+        .timeline-frame {
+            @apply w-16 h-16 border-2 border-blue-400 flex items-center justify-center bg-opacity-10 bg-blue-400 hover:bg-opacity-20 text-blue-400;
+        }
+
+        .retro-input {
+            @apply bg-gray-800 border-2 border-blue-400 text-blue-400 px-2 py-1;
+        }
+
+        .retro-button {
+            @apply bg-blue-500 text-white px-2 py-1 hover:bg-blue-600;
+        }
+
+        .pixel-border {
+            box-shadow: 
+                0 -4px var(--color-accent),
+                0 4px var(--color-accent),
+                4px 0 var(--color-accent),
+                -4px 0 var(--color-accent);
+        }
+
+        .tool-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .tool-label {
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: var(--color-text);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col text-sm p-4">
+    <h1 class="text-3xl font-bold text-center mb-4">PixelSprite</h1>
+    <!-- Emoji Menu -->
+    <div class="header h-24 flex items-center justify-center space-x-4 px-4">
+        <div class="tool-container">
+            <button id="pencil" class="tool-btn tool-active" title="Pencil (B)">✏️</button>
+            <span class="tool-label">Pencil</span>
+        </div>
+        <div class="tool-container">
+            <button id="eraser" class="tool-btn" title="Eraser (E)">🧽</button>
+            <span class="tool-label">Eraser</span>
+        </div>
+        <div class="tool-container">
+            <button id="fill" class="tool-btn" title="Fill (G)">🪣</button>
+            <span class="tool-label">Fill</span>
+        </div>
+        <div class="tool-container">
+            <button id="rectangle" class="tool-btn" title="Rectangle (U)">⬜</button>
+            <span class="tool-label">Rectangle</span>
+        </div>
+        <div class="tool-container">
+            <button id="circle" class="tool-btn" title="Circle (C)">⭕</button>
+            <span class="tool-label">Circle</span>
+        </div>
+        <div class="tool-container">
+            <button id="line" class="tool-btn" title="Line (L)">➖</button>
+            <span class="tool-label">Line</span>
+        </div>
+        <div class="tool-container">
+            <button id="move" class="tool-btn" title="Move (V)">✋</button>
+            <span class="tool-label">Move</span>
+        </div>
+        <div class="tool-container">
+            <button id="colorPicker" class="tool-btn" title="Pick Color (I)">👆</button>
+            <span class="tool-label">Pick Color</span>
+        </div>
+        <div class="tool-container">
+            <button id="exportBtn" class="tool-btn" title="Export">💾</button>
+            <span class="tool-label">Export</span>
+        </div>
+        <div class="tool-container">
+            <button id="flipHorizontalBtn" class="tool-btn" title="Flip Horizontal">↔️</button>
+            <span class="tool-label">Flip H</span>
+        </div>
+        <div class="tool-container">
+            <button id="flipVerticalBtn" class="tool-btn" title="Flip Vertical">↕️</button>
+            <span class="tool-label">Flip V</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex">
+        <!-- Left Panel -->
+        <div class="panel w-64 flex flex-col">
+            <!-- Color Selection -->
+            <div class="p-4 border-b-2 border-blue-400">
+                <div class="flex justify-between mb-4">
+                    <div class="color-well pixel-border" id="currentColor"></div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <div class="w-8 h-8 bg-black cursor-pointer pixel-border" data-color="#000000"></div>
+                        <div class="w-8 h-8 bg-white cursor-pointer pixel-border" data-color="#FFFFFF"></div>
+                        <div class="w-8 h-8 bg-red-500 cursor-pointer pixel-border" data-color="#EF4444"></div>
+                        <div class="w-8 h-8 bg-blue-500 cursor-pointer pixel-border" data-color="#3B82F6"></div>
+                    </div>
+                </div>
+                <input type="color" id="colorInput" class="w-full retro-input">
+            </div>
+            
+            <!-- Swatches -->
+            <div class="p-4 border-b-2 border-blue-400">
+                <div class="mb-2">Swatches</div>
+                <div class="grid grid-cols-8 gap-2">
+                    <div class="w-6 h-6 bg-blue-400 cursor-pointer pixel-border" data-color="#60A5FA"></div>
+                    <div class="w-6 h-6 bg-yellow-400 cursor-pointer pixel-border" data-color="#FBBF24"></div>
+                    <div class="w-6 h-6 bg-purple-400 cursor-pointer pixel-border" data-color="#A78BFA"></div>
+                    <div class="w-6 h-6 bg-pink-400 cursor-pointer pixel-border" data-color="#F472B6"></div>
+                </div>
+            </div>
+
+            <!-- Color Spectrum -->
+            <div class="flex-1 p-4">
+                <div class="mb-2">Color Spectrum</div>
+                <div class="h-32 bg-gradient-to-br from-white to-black pixel-border"></div>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Canvas -->
+            <div class="flex-1 flex items-center justify-center overflow-auto bg-opacity-10 bg-blue-400">
+                <div class="relative checkerboard pixel-border">
+                    <canvas id="canvas" width="64" height="64"></canvas>
+                    <canvas id="gridCanvas" class="absolute top-0 left-0 pointer-events-none" width="64" height="64"></canvas>
+                    <canvas id="previewCanvas" class="absolute top-0 left-0 pointer-events-none" width="64" height="64"></canvas>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="panel h-40 flex">
+                <!-- Layer Panel -->
+                <div class="w-48 border-r-2 border-blue-400 p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <span>Layers</span>
+                        <button id="addLayer" class="px-2 py-1 bg-blue-500 text-white hover:bg-blue-600">+</button>
+                    </div>
+                    <div id="layerList" class="space-y-2"></div>
+                </div>
+
+                <!-- Frames -->
+                <div class="flex-1 p-4">
+                    <div class="flex space-x-2">
+                        <div class="timeline-frame">1</div>
+                        <div class="timeline-frame">2</div>
+                        <button class="timeline-frame">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="panel w-64 p-4">
+            <!-- Preview -->
+            <div class="mb-6">
+                <div class="mb-2">Preview</div>
+                <div class="checkerboard pixel-border">
+                    <canvas id="previewWindow" width="128" height="128" class="w-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Tool Properties -->
+            <div>
+                <div class="mb-2">Tool Properties</div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block mb-1">Size</label>
+                        <input type="range" id="toolSize" class="w-full" min="1" max="32" value="1">
+                    </div>
+                    <div>
+                        <label class="block mb-1">Opacity</label>
+                        <input type="range" id="toolOpacity" class="w-full" min="0" max="100" value="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="header h-8 flex items-center justify-between px-2">
+        <span>Position: <span id="mousePos">0, 0</span></span>
+        <div class="flex items-center space-x-2">
+            <span>Zoom:</span>
+            <select id="zoomLevel" class="retro-input">
+                <option value="1">100%</option>
+                <option value="2">200%</option>
+                <option value="4">400%</option>
+                <option value="8" selected>800%</option>
+                <option value="16">1600%</option>
+            </select>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
+
